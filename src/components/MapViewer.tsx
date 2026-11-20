@@ -115,43 +115,45 @@ export default function MapViewer({
       if (!isHuman && !layers.showBotTrails) continue;
 
       const positions = player.positions;
-      if (positions.length < 2) continue;
+      if (positions.length === 0) continue;
 
       // In match view with playback, only show positions up to currentTime
       const visiblePositions = isMatchView
         ? positions.filter((p) => p[2] <= currentTime)
         : positions;
 
-      if (visiblePositions.length < 2) continue;
+      if (visiblePositions.length === 0) continue;
 
-      ctx.beginPath();
-      // High-visibility bright cyan for human, crisp luminous silver for bot
-      ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
-      ctx.lineWidth = isHuman ? 2.2 : 2.0;
-      ctx.globalAlpha = isHuman ? 0.9 : 0.85;
+      if (visiblePositions.length >= 2) {
+        ctx.beginPath();
+        // High-visibility bright cyan for human, crisp luminous silver for bot
+        ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
+        ctx.lineWidth = isHuman ? 2.2 : 2.0;
+        ctx.globalAlpha = isHuman ? 0.9 : 0.85;
 
-      // Strong drop-shadow halo for instant contrast on any map background
-      ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
-      ctx.shadowBlur = isHuman ? 3 : 4;
+        // Strong drop-shadow halo for instant contrast on any map background
+        ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+        ctx.shadowBlur = isHuman ? 3 : 4;
 
-      if (!isHuman) {
-        ctx.setLineDash([7, 4]); // Clearly defined dashes
-      } else {
-        ctx.setLineDash([]);
+        if (!isHuman) {
+          ctx.setLineDash([7, 4]); // Clearly defined dashes
+        } else {
+          ctx.setLineDash([]);
+        }
+
+        ctx.moveTo(visiblePositions[0][0] * scale, visiblePositions[0][1] * scale);
+        for (let i = 1; i < visiblePositions.length; i++) {
+          ctx.lineTo(
+            visiblePositions[i][0] * scale,
+            visiblePositions[i][1] * scale
+          );
+        }
+        ctx.stroke();
+
+        // Reset shadow after line stroke
+        ctx.shadowColor = "transparent";
+        ctx.shadowBlur = 0;
       }
-
-      ctx.moveTo(visiblePositions[0][0] * scale, visiblePositions[0][1] * scale);
-      for (let i = 1; i < visiblePositions.length; i++) {
-        ctx.lineTo(
-          visiblePositions[i][0] * scale,
-          visiblePositions[i][1] * scale
-        );
-      }
-      ctx.stroke();
-
-      // Reset shadow after line stroke
-      ctx.shadowColor = "transparent";
-      ctx.shadowBlur = 0;
 
       // Draw current position indicator (in match view for both humans and bots)
       if (isMatchView && visiblePositions.length > 0) {

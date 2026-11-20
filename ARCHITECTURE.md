@@ -80,12 +80,12 @@ The `y` column in the data is elevation (height), not a 2D coordinate — only `
 
 Coordinate conversion is done **at ETL time** (not runtime) — all JSON files store pre-computed pixel coordinates. This avoids repeating the math in the browser and ensures consistency.
 
-## Assumptions
+## Assumptions & Data Nuances
 
-| Area | Assumption | Reasoning |
-|------|-----------|-----------|
+| Area | Assumption / Nuance | Reasoning & Resolution |
+|------|--------------------|------------------------|
 | Bot detection | UUID user_id = human, numeric = bot | Documented in README; validated by checking BotPosition events only come from numeric IDs |
-| Timestamps | `ts` is relative match time, not wall-clock | README states this; we normalize to seconds-from-match-start in the ETL |
+| Timestamp unit discrepancy | Parquet typed `ts` as `timestamp[ms]`, but underlying values are epoch seconds | The raw timestamp integer `1,770,754,537` corresponds directly to Unix epoch seconds for **Feb 10, 2026 20:15:37 UTC** (the date of the gameplay). Position pings occur at consecutive integers +5s, +5s, +15s (standard 5-second sampling rate). Treating this as raw seconds elapsed from match start produces realistic 5–10 minute matches and smooth player motion (~2.5–5 units/sec). |
 | Feb 14 data | Partial day — fewer matches is expected | README notes data collection was ongoing |
 | Match ID suffix | `.nakama-0` stripped for display | It's a server instance suffix, not meaningful for level designers |
 | Event bytes | Decoded as UTF-8 | README specifies this encoding |

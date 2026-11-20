@@ -12,7 +12,7 @@ interface TimelineProps {
   onSpeedChange: (s: number) => void;
 }
 
-const SPEED_OPTIONS = [0.5, 1, 2, 4, 8];
+const SPEED_OPTIONS = [1, 2, 4, 8, 16];
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -31,8 +31,10 @@ export default function Timeline({
 }: TimelineProps) {
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(0);
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
 
-  // Animation loop for playback
+  // Animation loop for playback (using ref for smooth 60fps without hook churn)
   useEffect(() => {
     if (!isPlaying) {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -45,9 +47,10 @@ export default function Timeline({
       const delta = (now - lastFrameRef.current) / 1000; // seconds
       lastFrameRef.current = now;
 
-      onTimeChange(Math.min(currentTime + delta * speed, maxTime));
+      const nextTime = Math.min(currentTimeRef.current + delta * speed, maxTime);
+      onTimeChange(nextTime);
 
-      if (currentTime >= maxTime) {
+      if (nextTime >= maxTime) {
         onPlayToggle(); // auto-pause at end
         return;
       }
@@ -60,7 +63,14 @@ export default function Timeline({
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
     };
-  }, [isPlaying, speed, currentTime, maxTime, onTimeChange, onPlayToggle]);
+  }, [isPlaying, speed, maxTime, onTimeChange, onPlayToggle]);
+
+  const handlePlayClick = () => {
+    if (!isPlaying && currentTime >= maxTime) {
+      onTimeChange(0);
+    }
+    onPlayToggle();
+  };
 
   const handleSliderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -75,7 +85,7 @@ export default function Timeline({
     <div className="px-4 py-2 flex items-center gap-3">
       {/* Play/Pause button */}
       <button
-        onClick={onPlayToggle}
+        onClick={handlePlayClick}
         className="w-8 h-8 flex items-center justify-center rounded-full bg-lila-accent hover:bg-lila-accent/80 transition-colors text-white"
       >
         {isPlaying ? (

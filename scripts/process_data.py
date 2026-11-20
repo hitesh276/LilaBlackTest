@@ -126,11 +126,13 @@ def process_data(input_dir: str, output_dir: str):
                 clean_match_id = match_id.replace(".nakama-0", "")
 
                 # Compute match time offset
-                # Timestamps are stored as datetime — convert to total seconds
-                ts_values = match_df["ts"].astype("int64") // 10**6  # ns → ms
-                ts_min = ts_values.min()
-                ts_max = ts_values.max()
-                duration_ms = ts_max - ts_min
+                # The Parquet field is typed as timestamp[ms], but the underlying integer
+                # represents Unix epoch timestamp in seconds (e.g. 1,770,754,537 = Feb 10, 2026).
+                # Subtracting match start gives exact elapsed seconds within the match.
+                ts_values = match_df["ts"].apply(lambda t: int(t.value // 1_000_000))
+                ts_min = int(ts_values.min())
+                ts_max = int(ts_values.max())
+                duration_seconds = max(1, ts_max - ts_min)
 
                 players = []
                 human_count = 0
@@ -159,8 +161,8 @@ def process_data(input_dir: str, output_dir: str):
                         px, py = world_to_pixel(row["x"], row["z"], map_id)
 
                         # Time offset in seconds from match start
-                        row_ts_ms = int(row["ts"].value) // 10**6
-                        t_offset = round((row_ts_ms - ts_min) / 1000, 2)
+                        row_ts_sec = int(row["ts"].value // 1_000_000)
+                        t_offset = round(float(row_ts_sec - ts_min), 2)
 
                         if event in POSITION_EVENTS:
                             positions.append([px, py, t_offset])
@@ -204,7 +206,7 @@ def process_data(input_dir: str, output_dir: str):
                     "deaths": total_deaths,
                     "loots": total_loots,
                     "stormDeaths": total_storm,
-                    "durationSeconds": round(duration_ms / 1000, 1),
+                    "durationSeconds": round(float(duration_seconds), 1),
                 })
 
             # Write events file for this map+date
