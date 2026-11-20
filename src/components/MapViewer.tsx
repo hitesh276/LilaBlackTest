@@ -251,21 +251,23 @@ export default function MapViewer({
       return;
     }
 
-    // Collect relevant points
+    // Collect relevant points for heatmap
     const points: [number, number][] = [];
+
+    // In match view, if timeline is at 0, show the full match heat distribution;
+    // once playing or scrubbed (> 0), show cumulative heat up to currentTime
+    const applyTimeFilter = isMatchView && currentTime > 0;
 
     for (const player of players) {
       if (layers.heatmapMode === "traffic") {
-        // Use all positions
         for (const pos of player.positions) {
-          if (!isMatchView || pos[2] <= currentTime) {
+          if (!applyTimeFilter || pos[2] <= currentTime) {
             points.push([pos[0], pos[1]]);
           }
         }
       } else {
-        // Use specific event types
         for (const ev of player.events) {
-          if (isMatchView && ev.ts > currentTime) continue;
+          if (applyTimeFilter && ev.ts > currentTime) continue;
 
           const match =
             (layers.heatmapMode === "kills" &&
@@ -283,7 +285,12 @@ export default function MapViewer({
       }
     }
 
-    renderHeatmap(canvas, points, layers.heatmapMode === "traffic" ? 15 : 25, scale);
+    const radius =
+      layers.heatmapMode === "traffic"
+        ? (points.length < 500 ? 32 : 24)
+        : (points.length < 50 ? 42 : 32);
+
+    renderHeatmap(canvas, points, radius, scale, layers.heatmapMode);
   }, [players, layers.heatmapMode, currentTime, isMatchView, scale]);
 
   // ─── Zoom with scroll wheel ───

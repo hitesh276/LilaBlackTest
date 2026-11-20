@@ -89,11 +89,17 @@ export default function Legend({ layers }: LegendProps) {
               className="w-16 h-2 rounded-sm"
               style={{
                 background:
-                  "linear-gradient(to right, rgba(0,0,255,0.4), rgba(0,255,255,0.5), rgba(0,255,0,0.6), rgba(255,255,0,0.7), rgba(255,0,0,0.8))",
+                  layers.heatmapMode === "kills"
+                    ? "linear-gradient(to right, #991b1b, #ef4444, #f97316, #fef08a)"
+                    : layers.heatmapMode === "deaths"
+                    ? "linear-gradient(to right, #6b21a8, #d946ef, #f43f5e, #ffedd5)"
+                    : layers.heatmapMode === "loot"
+                    ? "linear-gradient(to right, #15803d, #22c55e, #eab308, #fef9c3)"
+                    : "linear-gradient(to right, #1e40af, #06b6d4, #22c55e, #eab308, #ef4444)",
               }}
             />
-            <span className="text-xs text-slate-400">
-              {layers.heatmapMode} density
+            <span className="text-xs text-slate-300 capitalize font-medium">
+              {layers.heatmapMode} Heat
             </span>
           </div>
         </>
