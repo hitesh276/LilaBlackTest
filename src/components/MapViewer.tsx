@@ -125,12 +125,17 @@ export default function MapViewer({
       if (visiblePositions.length < 2) continue;
 
       ctx.beginPath();
-      ctx.strokeStyle = isHuman ? "#22d3ee" : "#6b7280";
-      ctx.lineWidth = isHuman ? 2 : 1;
-      ctx.globalAlpha = isHuman ? 0.7 : 0.3;
+      // High-visibility bright cyan for human, crisp luminous silver for bot
+      ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
+      ctx.lineWidth = isHuman ? 2.2 : 2.0;
+      ctx.globalAlpha = isHuman ? 0.9 : 0.85;
+
+      // Strong drop-shadow halo for instant contrast on any map background
+      ctx.shadowColor = "rgba(0, 0, 0, 0.95)";
+      ctx.shadowBlur = isHuman ? 3 : 4;
 
       if (!isHuman) {
-        ctx.setLineDash([4, 4]);
+        ctx.setLineDash([7, 4]); // Clearly defined dashes
       } else {
         ctx.setLineDash([]);
       }
@@ -144,22 +149,26 @@ export default function MapViewer({
       }
       ctx.stroke();
 
-      // Draw current position indicator (in match view)
-      if (isMatchView && isHuman && visiblePositions.length > 0) {
+      // Reset shadow after line stroke
+      ctx.shadowColor = "transparent";
+      ctx.shadowBlur = 0;
+
+      // Draw current position indicator (in match view for both humans and bots)
+      if (isMatchView && visiblePositions.length > 0) {
         const last = visiblePositions[visiblePositions.length - 1];
         ctx.beginPath();
-        ctx.fillStyle = "#22d3ee";
+        ctx.fillStyle = isHuman ? "#22d3ee" : "#f1f5f9";
         ctx.globalAlpha = 1;
-        ctx.arc(last[0] * scale, last[1] * scale, 4, 0, Math.PI * 2);
+        ctx.arc(last[0] * scale, last[1] * scale, isHuman ? 4.5 : 3.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Outer glow ring
+        // Outer ring indicator
         ctx.beginPath();
-        ctx.strokeStyle = "#22d3ee";
+        ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
         ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.4;
-        ctx.setLineDash([]);
-        ctx.arc(last[0] * scale, last[1] * scale, 7, 0, Math.PI * 2);
+        ctx.globalAlpha = 0.6;
+        ctx.setLineDash(isHuman ? [] : [3, 2]);
+        ctx.arc(last[0] * scale, last[1] * scale, isHuman ? 8 : 6.5, 0, Math.PI * 2);
         ctx.stroke();
       }
     }

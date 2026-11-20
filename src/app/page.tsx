@@ -35,7 +35,7 @@ export default function Home() {
   // ─── Layer visibility ───
   const [layers, setLayers] = useState<LayerState>({
     showHumanTrails: true,
-    showBotTrails: false,
+    showBotTrails: true,
     showKills: true,
     showDeaths: true,
     showLoot: false,

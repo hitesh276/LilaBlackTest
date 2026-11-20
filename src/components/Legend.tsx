@@ -7,7 +7,7 @@ interface LegendProps {
 }
 
 export default function Legend({ layers }: LegendProps) {
-  const items: { label: string; color: string; type: "line" | "marker"; visible: boolean }[] = [
+  const items: { label: string; color: string; type: "line" | "marker"; dashed?: boolean; visible: boolean }[] = [
     {
       label: "Human Trail",
       color: "#22d3ee",
@@ -15,9 +15,10 @@ export default function Legend({ layers }: LegendProps) {
       visible: layers.showHumanTrails,
     },
     {
-      label: "Bot Trail",
-      color: "#6b7280",
+      label: "Bot Trail (Dashed)",
+      color: "#f1f5f9",
       type: "line",
+      dashed: true,
       visible: layers.showBotTrails,
     },
     {
@@ -58,10 +59,17 @@ export default function Legend({ layers }: LegendProps) {
         {visibleItems.map((item) => (
           <div key={item.label} className="flex items-center gap-2">
             {item.type === "line" ? (
-              <div
-                className="w-5 h-0.5 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
+              item.dashed ? (
+                <div
+                  className="w-5 h-0 border-b-2 border-dashed"
+                  style={{ borderColor: item.color }}
+                />
+              ) : (
+                <div
+                  className="w-5 h-0.5 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+              )
             ) : (
               <div
                 className="w-2.5 h-2.5 rounded-full"

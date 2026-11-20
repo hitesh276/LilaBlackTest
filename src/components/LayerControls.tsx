@@ -44,8 +44,8 @@ export default function LayerControls({
           className={toggleBtnClass(layers.showBotTrails)}
           onClick={() => onChange({ showBotTrails: !layers.showBotTrails })}
         >
-          <span className="inline-block w-2 h-2 rounded-full bg-lila-bot mr-1" />
-          Bot
+          <span className="inline-block w-2 h-2 rounded-full bg-slate-100 ring-1 ring-white/50 mr-1" />
+          Bot (Dashed)
         </button>
       </div>
 

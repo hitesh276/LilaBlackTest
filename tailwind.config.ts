@@ -14,7 +14,7 @@ const config: Config = {
         "lila-border": "#1e1e2e",
         "lila-accent": "#6366f1",
         "lila-human": "#22d3ee",
-        "lila-bot": "#6b7280",
+        "lila-bot": "#f1f5f9",
         "lila-kill": "#ef4444",
         "lila-death": "#f97316",
         "lila-loot": "#eab308",
