@@ -84,6 +84,8 @@ export interface LayerState {
   showDeaths: boolean;
   showLoot: boolean;
   showStorm: boolean;
+  showPOIZones: boolean;
+  showCampers: boolean;
   heatmapMode: HeatmapMode;
 }
 
@@ -96,4 +98,52 @@ export interface PlaybackState {
   currentTime: number;  // seconds from match start
   maxTime: number;      // match duration in seconds
   speed: number;        // playback speed multiplier
+}
+
+// ===== POI Zone Analytics =====
+
+export interface POIZone {
+  id: string;
+  name: string;
+  bounds: [number, number, number, number]; // [minX, minY, maxX, maxY] in 1024x1024 space
+  color: string;
+  role: string;
+}
+
+export type ThreatLevel = "Hot Contested" | "Balanced" | "Safe Farming" | "Dead Zone";
+
+export interface POISummary {
+  id: string;
+  name: string;
+  role: string;
+  color: string;
+  trafficCount: number;
+  trafficPercent: number;
+  kills: number;
+  deaths: number;
+  loots: number;
+  threatLevel: ThreatLevel;
+}
+
+// ===== Camping & Dwell Detection =====
+
+export interface DwellCluster {
+  x: number;
+  y: number;
+  duration: number; // in seconds
+  userId: string;
+  isHuman: boolean;
+  startTime: number;
+  endTime: number;
+}
+
+// ===== Event Bookmarks for Timeline =====
+
+export interface EventBookmark {
+  type: EventType;
+  x: number;
+  y: number;
+  ts: number;
+  userId: string;
+  isHuman: boolean;
 }

@@ -7,7 +7,13 @@ interface LegendProps {
 }
 
 export default function Legend({ layers }: LegendProps) {
-  const items: { label: string; color: string; type: "line" | "marker"; dashed?: boolean; visible: boolean }[] = [
+  const items: {
+    label: string;
+    color: string;
+    type: "line" | "marker" | "ring" | "box";
+    dashed?: boolean;
+    visible: boolean;
+  }[] = [
     {
       label: "Human Trail",
       color: "#22d3ee",
@@ -45,14 +51,26 @@ export default function Legend({ layers }: LegendProps) {
       type: "marker",
       visible: layers.showStorm,
     },
+    {
+      label: "Camping Spot (>15s)",
+      color: "#f59e0b",
+      type: "ring",
+      visible: layers.showCampers,
+    },
+    {
+      label: "POI Zone",
+      color: "#6366f1",
+      type: "box",
+      visible: layers.showPOIZones,
+    },
   ];
 
   const visibleItems = items.filter((i) => i.visible);
-  if (visibleItems.length === 0) return null;
+  if (visibleItems.length === 0 && layers.heatmapMode === "off") return null;
 
   return (
-    <div className="bg-lila-panel/80 backdrop-blur-md border border-lila-border rounded-lg p-3 min-w-[140px]">
-      <h3 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">
+    <div className="bg-lila-panel/85 backdrop-blur-md border border-lila-border rounded-lg p-3 min-w-[145px] shadow-xl select-none">
+      <h3 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-bold">
         Legend
       </h3>
       <div className="space-y-1.5">
@@ -70,13 +88,21 @@ export default function Legend({ layers }: LegendProps) {
                   style={{ backgroundColor: item.color }}
                 />
               )
+            ) : item.type === "ring" ? (
+              <div
+                className="w-2.5 h-2.5 rounded-full border-2 border-amber-400 bg-amber-400/20"
+              />
+            ) : item.type === "box" ? (
+              <div
+                className="w-3 h-2 rounded-sm border border-indigo-400 border-dashed bg-indigo-400/10"
+              />
             ) : (
               <div
                 className="w-2.5 h-2.5 rounded-full"
                 style={{ backgroundColor: item.color }}
               />
             )}
-            <span className="text-xs text-slate-400">{item.label}</span>
+            <span className="text-xs text-slate-300">{item.label}</span>
           </div>
         ))}
       </div>

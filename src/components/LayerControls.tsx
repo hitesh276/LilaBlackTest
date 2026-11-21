@@ -5,6 +5,8 @@ import { LayerState, HeatmapMode } from "@/lib/types";
 interface LayerControlsProps {
   layers: LayerState;
   onChange: (l: Partial<LayerState>) => void;
+  onTogglePOISidebar?: () => void;
+  isPOISidebarOpen?: boolean;
 }
 
 const HEATMAP_OPTIONS: { value: HeatmapMode; label: string; icon: string }[] = [
@@ -18,6 +20,8 @@ const HEATMAP_OPTIONS: { value: HeatmapMode; label: string; icon: string }[] = [
 export default function LayerControls({
   layers,
   onChange,
+  onTogglePOISidebar,
+  isPOISidebarOpen = false,
 }: LayerControlsProps) {
   const toggleBtnClass = (active: boolean) =>
     `px-3 py-1.5 rounded text-xs font-medium transition-all ${
@@ -27,7 +31,7 @@ export default function LayerControls({
     }`;
 
   return (
-    <div className="bg-lila-panel/90 backdrop-blur-md border border-lila-border rounded-lg p-3 space-y-2">
+    <div className="bg-lila-panel/90 backdrop-blur-md border border-lila-border rounded-lg p-3 space-y-2 select-none shadow-xl">
       {/* Trail toggles */}
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] text-slate-500 uppercase tracking-wider w-14">
@@ -94,6 +98,40 @@ export default function LayerControls({
             {opt.icon} {opt.label}
           </button>
         ))}
+      </div>
+
+      {/* Game Design Overlays: POIs & Camping */}
+      <div className="flex items-center gap-1.5 pt-1 border-t border-lila-border/50">
+        <span className="text-[10px] text-slate-500 uppercase tracking-wider w-14">
+          Design
+        </span>
+        <button
+          className={toggleBtnClass(layers.showPOIZones)}
+          onClick={() => onChange({ showPOIZones: !layers.showPOIZones })}
+          title="Toggle Named Point-of-Interest map zones"
+        >
+          🏷️ POI Zones
+        </button>
+        <button
+          className={toggleBtnClass(layers.showCampers)}
+          onClick={() => onChange({ showCampers: !layers.showCampers })}
+          title="Highlight stationary camping spots (>15s dwell)"
+        >
+          ⛺ Campers
+        </button>
+        {onTogglePOISidebar && (
+          <button
+            onClick={onTogglePOISidebar}
+            className={`px-3 py-1.5 rounded text-xs font-medium transition-all ml-auto ${
+              isPOISidebarOpen
+                ? "bg-lila-accent text-white shadow-md shadow-indigo-500/20"
+                : "bg-lila-bg text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+            title="Open detailed POI metrics and threat classification"
+          >
+            📊 POI Stats
+          </button>
+        )}
       </div>
     </div>
   );
