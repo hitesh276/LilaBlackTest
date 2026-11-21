@@ -44,12 +44,15 @@ export default function Timeline({
   const lastFrameRef = useRef<number>(0);
   const animTimeRef = useRef<number>(currentTime);
 
-  // Sync animTimeRef when currentTime prop changes while not playing (e.g. initial load or jump)
+  // Sync animTimeRef when currentTime prop changes while not playing, or when reset to 0 (e.g. map switch)
   useEffect(() => {
-    if (!isPlaying) {
+    if (!isPlaying || currentTime === 0) {
       animTimeRef.current = currentTime;
+      if (currentTime === 0) {
+        lastFrameRef.current = performance.now();
+      }
     }
-  }, [currentTime, isPlaying]);
+  }, [currentTime, isPlaying, selectedMatchId]);
 
   // Keep latest callbacks and state in refs so the animation loop never restarts or tears down
   const onTimeChangeRef = useRef(onTimeChange);

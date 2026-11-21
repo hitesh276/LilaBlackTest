@@ -54,6 +54,8 @@ export default function Home() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [speed, setSpeed] = useState(4);
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
   // ─── Game Designer Features: POI, Radar & Camping state ───
   const [isPOISidebarOpen, setIsPOISidebarOpen] = useState(false);
@@ -168,11 +170,19 @@ export default function Home() {
   useEffect(() => {
     if (!filters.selectedMap || !filters.selectedDate) return;
     setLoading(true);
+    // Remember whether play mode was active before switching map
+    const shouldKeepPlaying = isPlayingRef.current;
+
     loadMapDayData(filters.selectedMap, filters.selectedDate)
       .then((data) => {
         setMapDayData(data);
         setCurrentTime(0);
-        setIsPlaying(false);
+        // If play mode was enabled, start playing from the beginning for the new map
+        if (shouldKeepPlaying) {
+          setIsPlaying(true);
+        } else {
+          setIsPlaying(false);
+        }
         setLoading(false);
       })
       .catch(() => {
@@ -339,6 +349,9 @@ export default function Home() {
   }, []);
 
   const handleFilterChange = useCallback((f: Partial<FilterState>) => {
+    if (f.selectedMap !== undefined || f.selectedMatch !== undefined) {
+      setCurrentTime(0);
+    }
     setFilters((prev) => ({ ...prev, ...f }));
   }, []);
 
