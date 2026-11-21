@@ -27,6 +27,96 @@ interface MapViewerProps {
 
 const DISPLAY_SIZE = 900;
 
+interface InterpolatedJourney {
+  path: [number, number][];
+  currentPos: [number, number] | null;
+  heading?: number;
+  isAlive: boolean;
+  hasStarted: boolean;
+}
+
+/**
+ * Calculates continuous sub-second interpolated player route and moving head position.
+ * Prevents 15-second frozen stops and provides smooth 60fps playback motion.
+ */
+function getInterpolatedJourney(
+  positions: [number, number, number][],
+  currentTime: number,
+  isTimeFiltered: boolean
+): InterpolatedJourney {
+  if (!positions || positions.length === 0) {
+    return { path: [], currentPos: null, isAlive: false, hasStarted: false };
+  }
+
+  // If time filtering is off (e.g. static full view at currentTime === 0 in aggregate mode)
+  if (!isTimeFiltered || currentTime <= 0) {
+    const fullPath: [number, number][] = positions.map((p) => [p[0], p[1]]);
+    const last = positions[positions.length - 1];
+    return {
+      path: fullPath,
+      currentPos: [last[0], last[1]],
+      isAlive: true,
+      hasStarted: true,
+    };
+  }
+
+  const firstTime = positions[0][2];
+  if (currentTime < firstTime) {
+    // Player has not yet spawned in match at this time
+    return { path: [], currentPos: null, isAlive: false, hasStarted: false };
+  }
+
+  const lastIndex = positions.length - 1;
+  const lastTime = positions[lastIndex][2];
+
+  // If match time has reached or passed the player's last position
+  if (currentTime >= lastTime) {
+    const fullPath: [number, number][] = positions.map((p) => [p[0], p[1]]);
+    const last = positions[lastIndex];
+    return {
+      path: fullPath,
+      currentPos: [last[0], last[1]],
+      isAlive: false,
+      hasStarted: true,
+    };
+  }
+
+  // Find segment k where positions[k][2] <= currentTime < positions[k+1][2]
+  let k = 0;
+  for (let i = 0; i < lastIndex; i++) {
+    if (positions[i][2] <= currentTime && currentTime < positions[i + 1][2]) {
+      k = i;
+      break;
+    }
+  }
+
+  const p0 = positions[k];
+  const p1 = positions[k + 1];
+  const t0 = p0[2];
+  const t1 = p1[2];
+  const dt = t1 - t0;
+  const alpha = dt > 0 ? Math.max(0, Math.min(1, (currentTime - t0) / dt)) : 0;
+
+  const interpX = p0[0] + alpha * (p1[0] - p0[0]);
+  const interpY = p0[1] + alpha * (p1[1] - p0[1]);
+
+  const path: [number, number][] = [];
+  for (let i = 0; i <= k; i++) {
+    path.push([positions[i][0], positions[i][1]]);
+  }
+  path.push([interpX, interpY]);
+
+  const heading = Math.atan2(p1[1] - p0[1], p1[0] - p0[0]);
+
+  return {
+    path,
+    currentPos: [interpX, interpY],
+    heading,
+    isAlive: true,
+    hasStarted: true,
+  };
+}
+
 export default function MapViewer({
   mapId,
   players,
@@ -239,6 +329,8 @@ export default function MapViewer({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const isTimeActive = isMatchView || currentTime > 0;
+
     for (const player of players) {
       const isHuman = player.isHuman;
 
@@ -246,15 +338,13 @@ export default function MapViewer({
       if (!isHuman && !layers.showBotTrails) continue;
 
       const positions = player.positions;
-      if (positions.length === 0) continue;
+      if (!positions || positions.length === 0) continue;
 
-      const visiblePositions = isMatchView
-        ? positions.filter((p) => p[2] <= currentTime)
-        : positions;
+      const journey = getInterpolatedJourney(positions, currentTime, isTimeActive);
+      if (!journey.hasStarted || journey.path.length === 0) continue;
 
-      if (visiblePositions.length === 0) continue;
-
-      if (visiblePositions.length >= 2) {
+      // Draw path line
+      if (journey.path.length >= 2) {
         ctx.beginPath();
         ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
         ctx.lineWidth = isHuman ? 2.2 : 2.0;
@@ -269,9 +359,9 @@ export default function MapViewer({
           ctx.setLineDash([]);
         }
 
-        ctx.moveTo(visiblePositions[0][0] * scale, visiblePositions[0][1] * scale);
-        for (let i = 1; i < visiblePositions.length; i++) {
-          ctx.lineTo(visiblePositions[i][0] * scale, visiblePositions[i][1] * scale);
+        ctx.moveTo(journey.path[0][0] * scale, journey.path[0][1] * scale);
+        for (let i = 1; i < journey.path.length; i++) {
+          ctx.lineTo(journey.path[i][0] * scale, journey.path[i][1] * scale);
         }
         ctx.stroke();
 
@@ -280,21 +370,50 @@ export default function MapViewer({
       }
 
       // Current position indicator
-      if (isMatchView && visiblePositions.length > 0) {
-        const last = visiblePositions[visiblePositions.length - 1];
+      if (journey.currentPos) {
+        const hx = journey.currentPos[0] * scale;
+        const hy = journey.currentPos[1] * scale;
+
         ctx.beginPath();
         ctx.fillStyle = isHuman ? "#22d3ee" : "#f1f5f9";
         ctx.globalAlpha = 1;
-        ctx.arc(last[0] * scale, last[1] * scale, isHuman ? 4.5 : 3.5, 0, Math.PI * 2);
+        ctx.arc(hx, hy, isHuman ? 4.5 : 3.5, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.beginPath();
-        ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
-        ctx.lineWidth = 1.5;
-        ctx.globalAlpha = 0.6;
-        ctx.setLineDash(isHuman ? [] : [3, 2]);
-        ctx.arc(last[0] * scale, last[1] * scale, isHuman ? 8 : 6.5, 0, Math.PI * 2);
-        ctx.stroke();
+        if (journey.isAlive) {
+          // Outer glowing pulse ring
+          ctx.beginPath();
+          ctx.strokeStyle = isHuman ? "#22d3ee" : "#f1f5f9";
+          ctx.lineWidth = 1.5;
+          ctx.globalAlpha = 0.6;
+          ctx.setLineDash(isHuman ? [] : [3, 2]);
+          ctx.arc(hx, hy, isHuman ? 8 : 6.5, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Heading direction vector if moving
+          if (journey.heading !== undefined) {
+            const arrowLen = isHuman ? 9 : 7;
+            const tipX = hx + Math.cos(journey.heading) * arrowLen;
+            const tipY = hy + Math.sin(journey.heading) * arrowLen;
+
+            ctx.beginPath();
+            ctx.moveTo(hx, hy);
+            ctx.lineTo(tipX, tipY);
+            ctx.strokeStyle = isHuman ? "#67e8f9" : "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.setLineDash([]);
+            ctx.stroke();
+          }
+        } else {
+          // Journey completed
+          ctx.beginPath();
+          ctx.strokeStyle = isHuman ? "#38bdf8" : "#94a3b8";
+          ctx.lineWidth = 1.2;
+          ctx.globalAlpha = 0.5;
+          ctx.setLineDash([]);
+          ctx.arc(hx, hy, 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
       }
     }
 
@@ -312,11 +431,12 @@ export default function MapViewer({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    const isTimeActive = isMatchView || currentTime > 0;
+
     // 1. Draw Camping / Dwell Halos
     if (layers.showCampers && dwellClusters.length > 0) {
       for (const c of dwellClusters) {
-        // If in match view, only show if dwelling has started
-        if (isMatchView && c.startTime > currentTime) continue;
+        if (isTimeActive && c.startTime > currentTime) continue;
 
         const cx = c.x * scale;
         const cy = c.y * scale;
@@ -343,7 +463,7 @@ export default function MapViewer({
 
     // 2. Draw Combat & Loot Event Markers
     const shouldShow = (ev: PlayerEvent): boolean => {
-      if (isMatchView && ev.ts > currentTime) return false;
+      if (isTimeActive && ev.ts > currentTime) return false;
 
       switch (ev.type) {
         case "Kill":
@@ -368,6 +488,23 @@ export default function MapViewer({
         const px = ev.x * scale;
         const py = ev.y * scale;
         const color = EVENT_COLORS[ev.type] || "#ffffff";
+
+        // Dynamic combat shockwave pulse if event happened recently (within last 3.5s)
+        if (isTimeActive && currentTime >= ev.ts && currentTime - ev.ts <= 3.5) {
+          const age = currentTime - ev.ts; // 0 to 3.5s
+          const p = age / 3.5;
+          const pulseRadius = (8 + p * 24) * scale;
+          const pulseAlpha = Math.max(0, 0.9 * (1 - p));
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(px, py, pulseRadius, 0, Math.PI * 2);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2.5 * (1 - p * 0.5);
+          ctx.globalAlpha = pulseAlpha;
+          ctx.stroke();
+          ctx.restore();
+        }
 
         ctx.globalAlpha = 0.9;
 

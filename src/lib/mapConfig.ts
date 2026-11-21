@@ -67,3 +67,10 @@ export const EVENT_LABELS: Record<string, string> = {
   KilledByStorm: "Storm Death",
   Loot: "Loot Pickup",
 };
+
+/** Curated action-packed featured matches per map */
+export const FEATURED_MATCHES: Record<string, string> = {
+  AmbroseValley: "b971c686-07f6-4378-ad00-71b0b610414e", // 15 players (1H/14B), 26 kills, 12m 9s
+  GrandRift: "7abc3541-fa03-45b8-975b-d754ff33acad",     // 5 players (1H/4B), 4 kills, 8m 38s
+  Lockdown: "ead4c72d-0e3b-49b4-a91b-a9a21bed8012",      // 14 players (1H/13B), 19 kills, 11m 34s
+};

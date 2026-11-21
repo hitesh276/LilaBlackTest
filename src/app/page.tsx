@@ -12,6 +12,7 @@ import {
   EventBookmark,
 } from "@/lib/types";
 import { loadIndex, loadMapDayData } from "@/lib/dataLoader";
+import { FEATURED_MATCHES } from "@/lib/mapConfig";
 import { computePOISummaries } from "@/lib/poiConfig";
 import { detectDwellClusters } from "@/lib/dwellDetection";
 import FilterPanel from "@/components/FilterPanel";
@@ -33,7 +34,7 @@ export default function Home() {
   const [filters, setFilters] = useState<FilterState>({
     selectedMap: "AmbroseValley",
     selectedDate: "February_10",
-    selectedMatch: null,
+    selectedMatch: FEATURED_MATCHES["AmbroseValley"] || null,
   });
 
   // ─── Layer visibility ───
@@ -52,7 +53,7 @@ export default function Home() {
   // ─── Playback state ───
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState(4);
 
   // ─── Game Designer Features: POI, Radar & Camping state ───
   const [isPOISidebarOpen, setIsPOISidebarOpen] = useState(false);
@@ -78,10 +79,16 @@ export default function Home() {
     const qPoiId = params.get("poiId");
 
     if (qMap || qDate || qMatch) {
+      const chosenMap = qMap || "AmbroseValley";
+      const chosenMatch =
+        qMatch === "all"
+          ? null
+          : qMatch || FEATURED_MATCHES[chosenMap] || null;
+
       setFilters((prev) => ({
-        selectedMap: qMap || prev.selectedMap,
+        selectedMap: chosenMap,
         selectedDate: qDate || prev.selectedDate,
-        selectedMatch: qMatch === "all" ? null : qMatch || prev.selectedMatch,
+        selectedMatch: chosenMatch,
       }));
     }
 
@@ -211,14 +218,31 @@ export default function Home() {
           if (ev.ts > max) max = ev.ts;
         }
       }
-      return max;
+      return max > 0 ? max : 600;
     }
-    return 0;
+
+    // In All Matches mode, calculate the maximum elapsed match time
+    if (mapDayData?.matches) {
+      let max = 0;
+      for (const players of Object.values(mapDayData.matches)) {
+        for (const p of players) {
+          if (p.positions.length > 0) {
+            const lastPosT = p.positions[p.positions.length - 1][2];
+            if (lastPosT > max) max = lastPosT;
+          }
+          for (const ev of p.events) {
+            if (ev.ts > max) max = ev.ts;
+          }
+        }
+      }
+      return max > 0 ? max : 720;
+    }
+
+    return 600;
   }, [filters.selectedMatch, mapDayData]);
 
   // ─── Event Bookmarks for Timeline Scrubber ───
   const matchEventBookmarks = useMemo((): EventBookmark[] => {
-    if (!filters.selectedMatch) return [];
     const bookmarks: EventBookmark[] = [];
     for (const player of currentPlayers) {
       for (const ev of player.events) {
@@ -232,7 +256,9 @@ export default function Home() {
         });
       }
     }
-    return bookmarks.sort((a, b) => a.ts - b.ts);
+    // Sort chronologically; in aggregate mode limit to top 80 to prevent clutter
+    const sorted = bookmarks.sort((a, b) => a.ts - b.ts);
+    return filters.selectedMatch ? sorted : sorted.slice(0, 80);
   }, [filters.selectedMatch, currentPlayers]);
 
   // ─── POI Zone Analytics ───
@@ -395,21 +421,25 @@ export default function Home() {
       </main>
 
       {/* ── Bottom Bar: Timeline with Bookmarks & Jump Controls ── */}
-      {filters.selectedMatch && maxTime > 0 && (
-        <footer className="flex-shrink-0 border-t border-lila-border bg-lila-panel">
-          <Timeline
-            currentTime={currentTime}
-            maxTime={maxTime}
-            isPlaying={isPlaying}
-            speed={speed}
-            events={matchEventBookmarks}
-            onTimeChange={setCurrentTime}
-            onPlayToggle={() => setIsPlaying((p) => !p)}
-            onSpeedChange={setSpeed}
-            onEventJump={handleEventJump}
-          />
-        </footer>
-      )}
+      <footer className="flex-shrink-0 border-t border-lila-border bg-lila-panel">
+        <Timeline
+          currentTime={currentTime}
+          maxTime={maxTime > 0 ? maxTime : 600}
+          isPlaying={isPlaying}
+          speed={speed}
+          events={matchEventBookmarks}
+          selectedMatchId={filters.selectedMatch}
+          totalPlayersCount={currentPlayers.length}
+          onTimeChange={setCurrentTime}
+          onPlayToggle={() => setIsPlaying((p) => !p)}
+          onSpeedChange={setSpeed}
+          onEventJump={handleEventJump}
+          onPickFeatured={() => {
+            const feat = FEATURED_MATCHES[filters.selectedMap];
+            if (feat) handleFilterChange({ selectedMatch: feat });
+          }}
+        />
+      </footer>
     </div>
   );
 }
