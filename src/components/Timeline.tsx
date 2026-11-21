@@ -42,27 +42,60 @@ export default function Timeline({
 }: TimelineProps) {
   const rafRef = useRef<number | null>(null);
   const lastFrameRef = useRef<number>(0);
-  const currentTimeRef = useRef(currentTime);
-  currentTimeRef.current = currentTime;
+  const animTimeRef = useRef<number>(currentTime);
+
+  // Sync animTimeRef when currentTime prop changes while not playing (e.g. initial load or jump)
+  useEffect(() => {
+    if (!isPlaying) {
+      animTimeRef.current = currentTime;
+    }
+  }, [currentTime, isPlaying]);
+
+  // Keep latest callbacks and state in refs so the animation loop never restarts or tears down
+  const onTimeChangeRef = useRef(onTimeChange);
+  onTimeChangeRef.current = onTimeChange;
+
+  const onPlayToggleRef = useRef(onPlayToggle);
+  onPlayToggleRef.current = onPlayToggle;
+
+  const speedRef = useRef(speed);
+  speedRef.current = speed;
+
+  const maxTimeRef = useRef(maxTime);
+  maxTimeRef.current = maxTime;
 
   // Animation loop for smooth 60fps playback
   useEffect(() => {
     if (!isPlaying) {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
       return;
+    }
+
+    // If starting at or near the end, wrap to beginning
+    if (animTimeRef.current >= maxTimeRef.current - 0.5) {
+      animTimeRef.current = 0;
+      onTimeChangeRef.current(0);
     }
 
     lastFrameRef.current = performance.now();
 
     const animate = (now: number) => {
-      const delta = (now - lastFrameRef.current) / 1000; // seconds
+      // Clamp delta to prevent erratic jumps on background tabs
+      const delta = Math.min(0.1, Math.max(0.001, (now - lastFrameRef.current) / 1000));
       lastFrameRef.current = now;
 
-      const nextTime = Math.min(currentTimeRef.current + delta * speed, maxTime);
-      onTimeChange(nextTime);
+      // Smoothly advance time accumulator
+      const nextTime = Math.min(animTimeRef.current + delta * speedRef.current, maxTimeRef.current);
+      animTimeRef.current = nextTime;
 
-      if (nextTime >= maxTime) {
-        onPlayToggle(); // auto-pause at end
+      // Notify parent to re-render map with new currentTime
+      onTimeChangeRef.current(nextTime);
+
+      if (nextTime >= maxTimeRef.current) {
+        onPlayToggleRef.current(); // auto-pause at end
         return;
       }
 
@@ -72,12 +105,16 @@ export default function Timeline({
     rafRef.current = requestAnimationFrame(animate);
 
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
-  }, [isPlaying, speed, maxTime, onTimeChange, onPlayToggle]);
+  }, [isPlaying]);
 
   const handlePlayClick = () => {
-    if (!isPlaying && currentTime >= maxTime - 0.5) {
+    if (!isPlaying && animTimeRef.current >= maxTime - 0.5) {
+      animTimeRef.current = 0;
       onTimeChange(0);
     }
     onPlayToggle();
@@ -85,7 +122,9 @@ export default function Timeline({
 
   const handleSliderChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      onTimeChange(parseFloat(e.target.value));
+      const val = parseFloat(e.target.value);
+      animTimeRef.current = val;
+      onTimeChange(val);
     },
     [onTimeChange]
   );
@@ -97,24 +136,21 @@ export default function Timeline({
   const jumpNextEvent = () => {
     const list = combatEvents.length > 0 ? combatEvents : events;
     if (list.length === 0) return;
-    const next = list.find((e) => e.ts > currentTime + 0.8);
-    if (next) {
-      onTimeChange(Math.max(0, next.ts - 2.0));
-      onEventJump?.(next);
-    } else {
-      onTimeChange(Math.max(0, list[0].ts - 2.0));
-      onEventJump?.(list[0]);
-    }
+    const next = list.find((e) => e.ts > animTimeRef.current + 0.8);
+    const targetTime = next ? Math.max(0, next.ts - 2.0) : Math.max(0, list[0].ts - 2.0);
+    animTimeRef.current = targetTime;
+    onTimeChange(targetTime);
+    onEventJump?.(next || list[0]);
   };
 
   const jumpPrevEvent = () => {
     const list = combatEvents.length > 0 ? combatEvents : events;
     if (list.length === 0) return;
-    const prev = [...list].reverse().find((e) => e.ts < currentTime - 1.0);
-    if (prev) {
-      onTimeChange(Math.max(0, prev.ts - 2.0));
-      onEventJump?.(prev);
-    }
+    const prev = [...list].reverse().find((e) => e.ts < animTimeRef.current - 1.0);
+    const targetTime = prev ? Math.max(0, prev.ts - 2.0) : Math.max(0, list[0].ts - 2.0);
+    animTimeRef.current = targetTime;
+    onTimeChange(targetTime);
+    onEventJump?.(prev || list[0]);
   };
 
   const progress = maxTime > 0 ? Math.min(100, Math.max(0, (currentTime / maxTime) * 100)) : 0;

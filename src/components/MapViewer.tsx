@@ -138,6 +138,7 @@ export default function MapViewer({
 
   const [minimapImage, setMinimapImage] = useState<HTMLImageElement | null>(null);
   const [canvasSize, setCanvasSize] = useState(DISPLAY_SIZE);
+  const heatmapWasRenderedRef = useRef(false);
 
   // Zoom & Pan
   const [zoom, setZoom] = useState(1);
@@ -214,10 +215,15 @@ export default function MapViewer({
     if (!canvas) return;
 
     if (layers.heatmapMode === "off") {
-      const ctx = canvas.getContext("2d");
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (heatmapWasRenderedRef.current) {
+        const ctx = canvas.getContext("2d");
+        if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+        heatmapWasRenderedRef.current = false;
+      }
       return;
     }
+
+    heatmapWasRenderedRef.current = true;
 
     const points: [number, number][] = [];
     const applyTimeFilter = isMatchView && currentTime > 0;

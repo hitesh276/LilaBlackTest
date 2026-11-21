@@ -114,7 +114,7 @@ export default function Home() {
 
   // ─── Sync State to URL Query Parameters (Debounced) ───
   useEffect(() => {
-    if (typeof window === "undefined" || !index) return;
+    if (typeof window === "undefined" || !index || isPlaying) return;
 
     const timeout = setTimeout(() => {
       const params = new URLSearchParams();
@@ -282,6 +282,10 @@ export default function Home() {
   }, [filters.selectedMatch, index]);
 
   // ─── Handlers ───
+  const handlePlayToggle = useCallback(() => {
+    setIsPlaying((p) => !p);
+  }, []);
+
   const handleFilterChange = useCallback((f: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...f }));
   }, []);
@@ -431,7 +435,7 @@ export default function Home() {
           selectedMatchId={filters.selectedMatch}
           totalPlayersCount={currentPlayers.length}
           onTimeChange={setCurrentTime}
-          onPlayToggle={() => setIsPlaying((p) => !p)}
+          onPlayToggle={handlePlayToggle}
           onSpeedChange={setSpeed}
           onEventJump={handleEventJump}
           onPickFeatured={() => {
