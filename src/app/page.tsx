@@ -243,23 +243,75 @@ export default function Home() {
 
   // ─── Event Bookmarks for Timeline Scrubber ───
   const matchEventBookmarks = useMemo((): EventBookmark[] => {
-    const bookmarks: EventBookmark[] = [];
+    if (filters.selectedMatch) {
+      // In single match view, include all events for this match
+      const bookmarks: EventBookmark[] = [];
+      for (const player of currentPlayers) {
+        for (const ev of player.events) {
+          bookmarks.push({
+            type: ev.type,
+            x: ev.x,
+            y: ev.y,
+            ts: ev.ts,
+            userId: player.userId,
+            isHuman: player.isHuman,
+          });
+        }
+      }
+      return bookmarks.sort((a, b) => a.ts - b.ts);
+    }
+
+    // In All Matches macro mode: sample combat events uniformly across the full timeline (0s to maxTime)
+    // This prevents all pins from being crammed into the first 30 seconds of loot pickups.
+    const combatEvents: EventBookmark[] = [];
+    const otherEvents: EventBookmark[] = [];
+
     for (const player of currentPlayers) {
       for (const ev of player.events) {
-        bookmarks.push({
+        const item: EventBookmark = {
           type: ev.type,
           x: ev.x,
           y: ev.y,
           ts: ev.ts,
           userId: player.userId,
           isHuman: player.isHuman,
-        });
+        };
+        if (ev.type.includes("Kill") || ev.type.includes("Killed")) {
+          combatEvents.push(item);
+        } else {
+          otherEvents.push(item);
+        }
       }
     }
-    // Sort chronologically; in aggregate mode limit to top 80 to prevent clutter
-    const sorted = bookmarks.sort((a, b) => a.ts - b.ts);
-    return filters.selectedMatch ? sorted : sorted.slice(0, 80);
-  }, [filters.selectedMatch, currentPlayers]);
+
+    combatEvents.sort((a, b) => a.ts - b.ts);
+
+    if (combatEvents.length === 0) {
+      return otherEvents.slice(0, 60).sort((a, b) => a.ts - b.ts);
+    }
+
+    const matchDuration = maxTime > 0 ? maxTime : combatEvents[combatEvents.length - 1].ts;
+    const numBuckets = 60;
+    const bucketSize = matchDuration / numBuckets;
+    const sampled: EventBookmark[] = [];
+
+    for (let b = 0; b < numBuckets; b++) {
+      const tStart = b * bucketSize;
+      const tEnd = (b + 1) * bucketSize;
+      const inBucket = combatEvents.filter((e) => e.ts >= tStart && e.ts < tEnd);
+      if (inBucket.length > 0) {
+        // Prioritize Player Kill > BotKill > Deaths
+        inBucket.sort((a, b) => {
+          const scoreA = a.type === "Kill" ? 3 : a.type === "BotKill" ? 2 : 1;
+          const scoreB = b.type === "Kill" ? 3 : b.type === "BotKill" ? 2 : 1;
+          return scoreB - scoreA;
+        });
+        sampled.push(inBucket[0]);
+      }
+    }
+
+    return sampled.sort((a, b) => a.ts - b.ts);
+  }, [filters.selectedMatch, currentPlayers, maxTime]);
 
   // ─── POI Zone Analytics ───
   const poiSummaries = useMemo(() => {

@@ -137,20 +137,22 @@ export default function Timeline({
     const list = combatEvents.length > 0 ? combatEvents : events;
     if (list.length === 0) return;
     const next = list.find((e) => e.ts > animTimeRef.current + 0.8);
-    const targetTime = next ? Math.max(0, next.ts - 2.0) : Math.max(0, list[0].ts - 2.0);
+    const targetEvent = next || list[0];
+    const targetTime = Math.max(0, targetEvent.ts - 2.0);
     animTimeRef.current = targetTime;
     onTimeChange(targetTime);
-    onEventJump?.(next || list[0]);
+    onEventJump?.(targetEvent);
   };
 
   const jumpPrevEvent = () => {
     const list = combatEvents.length > 0 ? combatEvents : events;
     if (list.length === 0) return;
     const prev = [...list].reverse().find((e) => e.ts < animTimeRef.current - 1.0);
-    const targetTime = prev ? Math.max(0, prev.ts - 2.0) : Math.max(0, list[0].ts - 2.0);
+    const targetEvent = prev || list[list.length - 1];
+    const targetTime = Math.max(0, targetEvent.ts - 2.0);
     animTimeRef.current = targetTime;
     onTimeChange(targetTime);
-    onEventJump?.(prev || list[0]);
+    onEventJump?.(targetEvent);
   };
 
   const progress = maxTime > 0 ? Math.min(100, Math.max(0, (currentTime / maxTime) * 100)) : 0;
@@ -263,51 +265,59 @@ export default function Timeline({
             />
           </div>
 
-          {/* Event Bookmark Pins */}
-          {events.map((ev, idx) => {
-            const leftPct = maxTime > 0 ? (ev.ts / maxTime) * 100 : 0;
-            const isKill = ev.type === "Kill" || ev.type === "BotKill";
-            const isDeath = ev.type === "Killed" || ev.type === "BotKilled";
-            const isStorm = ev.type === "KilledByStorm";
+          {/* Event Bookmark Pins (z-30 with pointer-events-auto so clicks & hovers hit the pins directly) */}
+          <div className="absolute inset-0 pointer-events-none z-30">
+            {events.map((ev, idx) => {
+              const leftPct = maxTime > 0 ? (ev.ts / maxTime) * 100 : 0;
+              const isKill = ev.type === "Kill" || ev.type === "BotKill";
+              const isDeath = ev.type === "Killed" || ev.type === "BotKilled";
+              const isStorm = ev.type === "KilledByStorm";
 
-            const color = isKill
-              ? "#ef4444"
-              : isDeath
-              ? "#f97316"
-              : isStorm
-              ? "#a855f7"
-              : "#eab308";
+              const color = isKill
+                ? "#ef4444"
+                : isDeath
+                ? "#f97316"
+                : isStorm
+                ? "#a855f7"
+                : "#eab308";
 
-            const icon = isKill ? "⚔️" : isDeath ? "💀" : isStorm ? "⚡" : "📦";
+              const icon = isKill ? "⚔️" : isDeath ? "💀" : isStorm ? "⚡" : "📦";
 
-            return (
-              <button
-                key={`${ev.type}_${ev.ts}_${idx}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onTimeChange(Math.max(0, ev.ts - 2.0));
-                  onEventJump?.(ev);
-                }}
-                title={`[${formatTime(ev.ts)}] ${ev.type} (${ev.isHuman ? "Human" : "Bot"})`}
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3.5 h-3.5 flex items-center justify-center rounded-full hover:scale-150 transition-transform z-10 group/pin"
-                style={{ left: `${leftPct}%` }}
-              >
-                <span
-                  className="w-1.5 h-3 rounded-full shadow-md"
-                  style={{ backgroundColor: color }}
-                />
-                {/* Tooltip on pin hover */}
-                <div className="absolute bottom-5 left-1/2 -translate-x-1/2 hidden group-hover/pin:flex flex-col items-center pointer-events-none z-30 whitespace-nowrap bg-black/95 text-white text-[10px] px-2 py-0.5 rounded border border-white/20 shadow-xl">
-                  <span>
-                    {icon} {ev.type} at {formatTime(ev.ts)}
-                  </span>
-                  <span className="text-slate-400 text-[9px]">
-                    {ev.isHuman ? "Human" : "Bot"}
-                  </span>
-                </div>
-              </button>
-            );
-          })}
+              return (
+                <button
+                  key={`${ev.type}_${ev.ts}_${idx}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const targetTime = Math.max(0, ev.ts - 2.0);
+                    animTimeRef.current = targetTime;
+                    onTimeChange(targetTime);
+                    onEventJump?.(ev);
+                  }}
+                  title={`[${formatTime(ev.ts)}] ${ev.type} (${ev.isHuman ? "Human" : "Bot"})`}
+                  className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-6 flex items-center justify-center cursor-pointer pointer-events-auto hover:scale-150 transition-transform group/pin"
+                  style={{ left: `${leftPct}%` }}
+                >
+                  <span
+                    className="w-1.5 h-3.5 rounded-full shadow-md transition-all group-hover/pin:ring-2 group-hover/pin:ring-white pointer-events-none"
+                    style={{ backgroundColor: color }}
+                  />
+                  {/* Tooltip on pin hover */}
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover/pin:flex flex-col items-center pointer-events-none z-50 whitespace-nowrap bg-black/95 text-white text-[10px] px-2.5 py-1 rounded-md border border-white/20 shadow-2xl">
+                    <span className="font-semibold text-slate-100">
+                      {icon} {ev.type} at {formatTime(ev.ts)}
+                    </span>
+                    <span className="text-slate-400 text-[9px]">
+                      {ev.isHuman ? "Human Player" : "Bot"}
+                    </span>
+                    <span className="text-cyan-400 text-[8px] font-mono mt-0.5">
+                      Click to jump & locate fight
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
 
           <input
             type="range"

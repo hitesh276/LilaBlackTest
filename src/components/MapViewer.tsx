@@ -723,14 +723,23 @@ export default function MapViewer({
         {/* Radar ping on event jump */}
         {radarPing && (
           <div
-            className="absolute pointer-events-none rounded-full border-2 border-red-400 bg-red-500/20 animate-ping z-10"
+            className="absolute pointer-events-none z-20 flex items-center justify-center -translate-x-1/2 -translate-y-1/2"
             style={{
-              left: radarPing.x * scale - 24,
-              top: radarPing.y * scale - 24,
-              width: 48,
-              height: 48,
+              left: radarPing.x * scale,
+              top: radarPing.y * scale,
+              width: 72,
+              height: 72,
             }}
-          />
+          >
+            {/* Outer animated radar beacon ring */}
+            <div className="absolute inset-0 rounded-full border-2 border-red-500 bg-red-500/25 animate-ping" />
+            {/* Secondary pulsing ring */}
+            <div className="absolute inset-2 rounded-full border border-amber-400/80 animate-pulse" />
+            {/* Inner glowing center badge */}
+            <div className="w-6 h-6 rounded-full bg-red-600 ring-2 ring-white flex items-center justify-center text-[11px] text-white shadow-xl shadow-red-500/80">
+              ⚔️
+            </div>
+          </div>
         )}
       </div>
 
