@@ -199,6 +199,18 @@ export default function Home() {
     );
   }, [index, filters.selectedMap, filters.selectedDate]);
 
+  // ─── Ensure selectedMatch exists in loaded mapDayData (e.g. after date change) ───
+  useEffect(() => {
+    if (!mapDayData || !filters.selectedMatch) return;
+    if (!mapDayData.matches[filters.selectedMatch]) {
+      const top = filteredSummaries[0];
+      setFilters((prev) => ({
+        ...prev,
+        selectedMatch: top ? top.matchId : null,
+      }));
+    }
+  }, [mapDayData, filters.selectedMatch, filteredSummaries]);
+
   // ─── Current match players ───
   const currentPlayers = useMemo((): PlayerJourney[] => {
     if (!mapDayData) return [];

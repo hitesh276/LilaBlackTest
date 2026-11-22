@@ -22,11 +22,13 @@ export default function FilterPanel({
 
   const featuredMatchId = FEATURED_MATCHES[filters.selectedMap];
 
-  // Sort match summaries: featured match first, then by total players + kills descending
+  // Sort match summaries: featured match first, multi-human (duo) matches next, then by total players + kills descending
   const sortedMatches = useMemo(() => {
     return [...matchSummaries].sort((a, b) => {
       if (a.matchId === featuredMatchId) return -1;
       if (b.matchId === featuredMatchId) return 1;
+      if (a.humanCount > 1 && b.humanCount <= 1) return -1;
+      if (b.humanCount > 1 && a.humanCount <= 1) return 1;
       const scoreA = (a.humanCount + a.botCount) * 10 + a.kills;
       const scoreB = (b.humanCount + b.botCount) * 10 + b.kills;
       return scoreB - scoreA;
@@ -66,7 +68,7 @@ export default function FilterPanel({
           className={selectClass}
           value={filters.selectedDate}
           onChange={(e) =>
-            onChange({ selectedDate: e.target.value })
+            onChange({ selectedDate: e.target.value, selectedMatch: null })
           }
         >
           {index.dates.map((d) => (
@@ -96,8 +98,13 @@ export default function FilterPanel({
           </option>
           {sortedMatches.map((s) => {
             const isFeatured = s.matchId === featuredMatchId;
+            const isMultiHuman = s.humanCount > 1;
             const totalPlayers = s.humanCount + s.botCount;
-            const prefix = isFeatured ? "⭐ Featured: " : "";
+            const prefix = isFeatured
+              ? "⭐ Featured: "
+              : isMultiHuman
+              ? "👥 2 Humans (Duo): "
+              : "";
             return (
               <option key={s.matchId} value={s.matchId}>
                 {prefix}
