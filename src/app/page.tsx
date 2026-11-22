@@ -183,6 +183,28 @@ export default function Home() {
         } else {
           setIsPlaying(false);
         }
+
+        // Validate and update selectedMatch for the newly loaded map data
+        setFilters((prev) => {
+          // If in All Matches mode (null), stay in All Matches mode
+          if (prev.selectedMatch === null) {
+            return prev;
+          }
+          // If currently selected match exists in the new data, keep it!
+          if (data.matches && data.matches[prev.selectedMatch]) {
+            return prev;
+          }
+          // Otherwise, pick the match with the most players in the new map/date
+          const matchIds = data.matches ? Object.keys(data.matches) : [];
+          if (matchIds.length === 0) {
+            return { ...prev, selectedMatch: null };
+          }
+          const bestMatchId = matchIds.sort(
+            (a, b) => (data.matches[b]?.length || 0) - (data.matches[a]?.length || 0)
+          )[0];
+          return { ...prev, selectedMatch: bestMatchId };
+        });
+
         setLoading(false);
       })
       .catch(() => {
@@ -198,18 +220,6 @@ export default function Home() {
       (s) => s.map === filters.selectedMap && s.date === filters.selectedDate
     );
   }, [index, filters.selectedMap, filters.selectedDate]);
-
-  // ─── Ensure selectedMatch exists in loaded mapDayData (e.g. after date change) ───
-  useEffect(() => {
-    if (!mapDayData || !filters.selectedMatch) return;
-    if (!mapDayData.matches[filters.selectedMatch]) {
-      const top = filteredSummaries[0];
-      setFilters((prev) => ({
-        ...prev,
-        selectedMatch: top ? top.matchId : null,
-      }));
-    }
-  }, [mapDayData, filters.selectedMatch, filteredSummaries]);
 
   // ─── Current match players ───
   const currentPlayers = useMemo((): PlayerJourney[] => {
@@ -517,7 +527,9 @@ export default function Home() {
           onEventJump={handleEventJump}
           onPickFeatured={() => {
             const feat = FEATURED_MATCHES[filters.selectedMap];
-            if (feat) handleFilterChange({ selectedMatch: feat });
+            if (feat) {
+              handleFilterChange({ selectedDate: "February_10", selectedMatch: feat });
+            }
           }}
         />
       </footer>

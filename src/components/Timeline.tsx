@@ -302,7 +302,7 @@ export default function Timeline({
                   style={{ left: `${leftPct}%` }}
                 >
                   <span
-                    className="w-1.5 h-3.5 rounded-full shadow-md transition-all group-hover/pin:ring-2 group-hover/pin:ring-white pointer-events-none"
+                    className="inline-block w-2 h-4 rounded-full shadow-md border border-black/50 transition-all group-hover/pin:ring-2 group-hover/pin:ring-white pointer-events-none"
                     style={{ backgroundColor: color }}
                   />
                   {/* Tooltip on pin hover */}

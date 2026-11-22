@@ -46,9 +46,7 @@ export default function FilterPanel({
           className={selectClass}
           value={filters.selectedMap}
           onChange={(e) => {
-            const newMap = e.target.value;
-            const feat = FEATURED_MATCHES[newMap] || null;
-            onChange({ selectedMap: newMap, selectedMatch: feat });
+            onChange({ selectedMap: e.target.value });
           }}
         >
           {index.maps.map((m) => (
@@ -67,9 +65,9 @@ export default function FilterPanel({
         <select
           className={selectClass}
           value={filters.selectedDate}
-          onChange={(e) =>
-            onChange({ selectedDate: e.target.value, selectedMatch: null })
-          }
+          onChange={(e) => {
+            onChange({ selectedDate: e.target.value });
+          }}
         >
           {index.dates.map((d) => (
             <option key={d} value={d}>
