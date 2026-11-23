@@ -51,6 +51,20 @@ export const MAP_POIS: Record<string, POIZone[]> = {
       color: "#d97706",
       role: "Northeast open scorched plains & sniper sightlines",
     },
+    {
+      id: "west_pass",
+      name: "West Tactical Pass",
+      bounds: [300, 440, 380, 530],
+      color: "#10b981",
+      role: "Narrow ravine pass connecting Labour Quarters and Mine Pit",
+    },
+    {
+      id: "southeast_ridge",
+      name: "Southeast Ridge Outpost",
+      bounds: [610, 600, 710, 690],
+      color: "#10b981",
+      role: "Elevated extraction plateau between Mine Pit and Engineer's Quarters",
+    },
   ],
 
   AmbroseValley: [
@@ -89,6 +103,34 @@ export const MAP_POIS: Record<string, POIZone[]> = {
       color: "#8b5cf6",
       role: "Southern extraction ring & suburban clusters",
     },
+    {
+      id: "west_compound",
+      name: "West Water Compound",
+      bounds: [60, 320, 220, 460],
+      color: "#0ea5e9",
+      role: "Enclosed water filtration facility with perimeter defense & high supply loot",
+    },
+    {
+      id: "southwest_depot",
+      name: "Southwest Industrial Depot",
+      bounds: [100, 760, 250, 900],
+      color: "#f97316",
+      role: "Heavy construction yard, vehicle maintenance & southern highway junction",
+    },
+    {
+      id: "west_farmstead",
+      name: "West Farmstead & Ranch",
+      bounds: [200, 480, 330, 590],
+      color: "#84cc16",
+      role: "Rustic barns, silos, and rural perimeter outpost west of the river",
+    },
+    {
+      id: "east_lookout",
+      name: "East Hilltop Lookout",
+      bounds: [560, 360, 650, 450],
+      color: "#ec4899",
+      role: "Elevated eastern ridge lookout overseeing river approaches",
+    },
   ],
 
   Lockdown: [
@@ -119,6 +161,34 @@ export const MAP_POIS: Record<string, POIZone[]> = {
       bounds: [300, 740, 520, 900],
       color: "#22c55e",
       role: "Cliffside patrol road & peripheral extraction zone",
+    },
+    {
+      id: "east_quarry",
+      name: "East Quarry & Excavation",
+      bounds: [700, 360, 840, 540],
+      color: "#d97706",
+      role: "Heavy excavation pit with earthmovers, cranes, and open sightlines",
+    },
+    {
+      id: "observatory_hill",
+      name: "Observatory & Radar Dome",
+      bounds: [300, 380, 420, 490],
+      color: "#8b5cf6",
+      role: "Elevated hilltop radar dish & communications bunker",
+    },
+    {
+      id: "central_depot",
+      name: "Central Logistics Depot",
+      bounds: [460, 370, 580, 450],
+      color: "#0ea5e9",
+      role: "Highway fueling depot and cargo staging area west of Central Compound",
+    },
+    {
+      id: "canal_shacks",
+      name: "West Canal Shacks",
+      bounds: [140, 320, 250, 460],
+      color: "#14b8a6",
+      role: "Waterfront stilt houses and wooden walkways along western canal",
     },
   ],
 };
