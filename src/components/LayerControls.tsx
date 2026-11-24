@@ -24,14 +24,14 @@ export default function LayerControls({
   isPOISidebarOpen = false,
 }: LayerControlsProps) {
   const toggleBtnClass = (active: boolean) =>
-    `px-3 py-1.5 rounded text-xs font-medium transition-all ${
+    `px-2.5 py-1 rounded text-xs font-medium transition-all ${
       active
         ? "bg-white/10 text-white border border-white/20 shadow-sm"
         : "bg-lila-bg/60 text-slate-500 border border-transparent hover:text-slate-300 hover:bg-white/5"
     }`;
 
   return (
-    <div className="bg-lila-panel/90 backdrop-blur-md border border-lila-border rounded-lg p-3 space-y-2 select-none shadow-xl">
+    <div className="bg-lila-panel/90 backdrop-blur-md border border-lila-border rounded-lg p-2.5 space-y-1.5 select-none shadow-xl">
       {/* Trail toggles */}
       <div className="flex items-center gap-1.5">
         <span className="text-[10px] text-slate-500 uppercase tracking-wider w-14">
@@ -54,7 +54,7 @@ export default function LayerControls({
       </div>
 
       {/* Event toggles */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <span className="text-[10px] text-slate-500 uppercase tracking-wider w-14">
           Events
         </span>
@@ -83,6 +83,51 @@ export default function LayerControls({
           <span className="text-lila-storm mr-1">⚡</span> Storm
         </button>
       </div>
+
+      {/* Kill Sub-filters (when Kills are active) */}
+      {layers.showKills && (
+        <div className="flex items-center gap-1.5 pl-14 text-[11px] animate-fadeIn">
+          <span className="text-slate-600 text-[10px] uppercase font-semibold mr-0.5">
+            Filter:
+          </span>
+          <button
+            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+              (layers.showHumanKills ?? true)
+                ? "bg-cyan-950/60 text-cyan-300 border border-cyan-500/30"
+                : "bg-lila-bg/40 text-slate-500 border border-transparent hover:text-slate-300"
+            }`}
+            onClick={() =>
+              onChange({ showHumanKills: !(layers.showHumanKills ?? true) })
+            }
+          >
+            👤 Human Kills
+          </button>
+          <button
+            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+              (layers.showBotKills ?? true)
+                ? "bg-red-950/60 text-red-300 border border-red-500/30"
+                : "bg-lila-bg/40 text-slate-500 border border-transparent hover:text-slate-300"
+            }`}
+            onClick={() =>
+              onChange({ showBotKills: !(layers.showBotKills ?? true) })
+            }
+          >
+            🤖 Bot Kills
+          </button>
+          <button
+            className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
+              (layers.showSharedKills ?? true)
+                ? "bg-amber-950/60 text-amber-300 border border-amber-500/30"
+                : "bg-lila-bg/40 text-slate-500 border border-transparent hover:text-slate-300"
+            }`}
+            onClick={() =>
+              onChange({ showSharedKills: !(layers.showSharedKills ?? true) })
+            }
+          >
+            🤝 Shared (Assists)
+          </button>
+        </div>
+      )}
 
       {/* Heatmap mode */}
       <div className="flex items-center gap-1.5">

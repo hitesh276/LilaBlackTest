@@ -7,10 +7,16 @@ interface LegendProps {
 }
 
 export default function Legend({ layers }: LegendProps) {
+  const showAnyKills =
+    layers.showKills &&
+    (layers.showHumanKills !== false ||
+      layers.showBotKills !== false ||
+      layers.showSharedKills !== false);
+
   const items: {
     label: string;
     color: string;
-    type: "line" | "marker" | "ring" | "box";
+    type: "line" | "marker" | "ring" | "box" | "dual-ring";
     dashed?: boolean;
     visible: boolean;
   }[] = [
@@ -28,13 +34,25 @@ export default function Legend({ layers }: LegendProps) {
       visible: layers.showBotTrails,
     },
     {
-      label: "Player Kill",
-      color: "#ef4444",
+      label: "Human Kill",
+      color: "#22d3ee",
       type: "marker",
-      visible: layers.showKills,
+      visible: showAnyKills && (layers.showHumanKills ?? true),
     },
     {
-      label: "Player Death",
+      label: "Bot Kill",
+      color: "#ef4444",
+      type: "marker",
+      visible: showAnyKills && (layers.showBotKills ?? true),
+    },
+    {
+      label: "Shared Kill / Assist",
+      color: "#facc15",
+      type: "dual-ring",
+      visible: showAnyKills && (layers.showSharedKills ?? true),
+    },
+    {
+      label: "Combat Death",
       color: "#f97316",
       type: "marker",
       visible: layers.showDeaths,
@@ -69,7 +87,7 @@ export default function Legend({ layers }: LegendProps) {
   if (visibleItems.length === 0 && layers.heatmapMode === "off") return null;
 
   return (
-    <div className="bg-lila-panel/85 backdrop-blur-md border border-lila-border rounded-lg p-3 min-w-[145px] shadow-xl select-none">
+    <div className="bg-lila-panel/85 backdrop-blur-md border border-lila-border rounded-lg p-3 min-w-[155px] shadow-xl select-none">
       <h3 className="text-[10px] text-slate-500 uppercase tracking-wider mb-2 font-bold">
         Legend
       </h3>
@@ -88,14 +106,14 @@ export default function Legend({ layers }: LegendProps) {
                   style={{ backgroundColor: item.color }}
                 />
               )
+            ) : item.type === "dual-ring" ? (
+              <div className="w-3 h-3 rounded-full border border-amber-400 bg-amber-400/20 flex items-center justify-center">
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              </div>
             ) : item.type === "ring" ? (
-              <div
-                className="w-2.5 h-2.5 rounded-full border-2 border-amber-400 bg-amber-400/20"
-              />
+              <div className="w-2.5 h-2.5 rounded-full border-2 border-amber-400 bg-amber-400/20" />
             ) : item.type === "box" ? (
-              <div
-                className="w-3 h-2 rounded-sm border border-indigo-400 border-dashed bg-indigo-400/10"
-              />
+              <div className="w-3 h-2 rounded-sm border border-indigo-400 border-dashed bg-indigo-400/10" />
             ) : (
               <div
                 className="w-2.5 h-2.5 rounded-full"

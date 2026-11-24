@@ -15,6 +15,7 @@ import { loadIndex, loadMapDayData } from "@/lib/dataLoader";
 import { FEATURED_MATCHES } from "@/lib/mapConfig";
 import { computePOISummaries } from "@/lib/poiConfig";
 import { detectDwellClusters } from "@/lib/dwellDetection";
+import { analyzeCombat } from "@/lib/combatAnalytics";
 import FilterPanel from "@/components/FilterPanel";
 import LayerControls from "@/components/LayerControls";
 import MapViewer from "@/components/MapViewer";
@@ -42,6 +43,9 @@ export default function Home() {
     showHumanTrails: true,
     showBotTrails: true,
     showKills: true,
+    showHumanKills: true,
+    showBotKills: true,
+    showSharedKills: true,
     showDeaths: true,
     showLoot: false,
     showStorm: true,
@@ -365,6 +369,12 @@ export default function Home() {
     );
   }, [filters.selectedMatch, index]);
 
+  // ─── Combat Analytics Breakdown (Human, Bot & Shared Kills) ───
+  const combatBreakdown = useMemo(() => {
+    if (currentPlayers.length === 0) return null;
+    return analyzeCombat(currentPlayers).breakdown;
+  }, [currentPlayers]);
+
   // ─── Handlers ───
   const handlePlayToggle = useCallback(() => {
     setIsPlaying((p) => !p);
@@ -478,7 +488,7 @@ export default function Home() {
           />
 
           {/* Layer controls — floating bottom-left */}
-          <div className="absolute bottom-14 left-4 z-10">
+          <div className="absolute bottom-3 left-4 z-10">
             <LayerControls
               layers={layers}
               onChange={handleLayerChange}
@@ -495,7 +505,7 @@ export default function Home() {
           {/* Stats panel — floating top-left */}
           {currentStats && (
             <div className="absolute top-4 left-4 z-10">
-              <StatsPanel stats={currentStats} />
+              <StatsPanel stats={currentStats} combat={combatBreakdown} />
             </div>
           )}
         </div>

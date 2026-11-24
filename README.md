@@ -8,7 +8,7 @@ A web-based visualization tool for Level Designers to explore player movement, c
 
 ## 🚀 Live Demo
 
-**[→ Open the tool](YOUR_DEPLOYED_URL_HERE)**
+**[→ Open the tool](https://lila-black-test.vercel.app/?map=AmbroseValley&date=February_10&match=b971c686-07f6-4378-ad00-71b0b610414e)**
 
 ## Features
 
@@ -53,6 +53,7 @@ A web-based visualization tool for Level Designers to explore player movement, c
 │   └── lib/               ← Types, config, utilities
 ├── ARCHITECTURE.md         ← System design & decisions
 ├── INSIGHTS.md             ← 3 data-driven insights
+├── USER_GUIDE.md           ← Complete user manual & parameter dictionary
 └── README.md               ← This file
 ```
 

@@ -81,12 +81,30 @@ export interface LayerState {
   showHumanTrails: boolean;
   showBotTrails: boolean;
   showKills: boolean;
+  showHumanKills?: boolean;
+  showBotKills?: boolean;
+  showSharedKills?: boolean;
   showDeaths: boolean;
   showLoot: boolean;
   showStorm: boolean;
   showPOIZones: boolean;
   showCampers: boolean;
   heatmapMode: HeatmapMode;
+}
+
+// ===== Combat Breakdown =====
+
+export interface CombatBreakdown {
+  totalKills: number;
+  humanKills: number;
+  botKills: number;
+  sharedKills: number;
+  totalDeaths: number;
+  humanDeaths: number;
+  botDeaths: number;
+  killedByHuman: number;
+  killedByBot: number;
+  killedByStorm: number;
 }
 
 export type HeatmapMode = "off" | "traffic" | "kills" | "deaths" | "loot";

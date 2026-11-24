@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useState, useMemo } from "react";
 import {
   PlayerJourney,
   LayerState,
@@ -11,6 +11,7 @@ import {
 import { MAP_CONFIGS, EVENT_COLORS, MINIMAP_SIZE } from "@/lib/mapConfig";
 import { MAP_POIS, isPointInBounds } from "@/lib/poiConfig";
 import { renderHeatmap } from "@/lib/heatmap";
+import { analyzeCombat, EventCombatMeta } from "@/lib/combatAnalytics";
 
 interface MapViewerProps {
   mapId: string;
@@ -159,6 +160,7 @@ export default function MapViewer({
 
   const mapConfig = MAP_CONFIGS[mapId];
   const pois = MAP_POIS[mapId] || [];
+  const combatData = useMemo(() => analyzeCombat(players), [players]);
 
   // Responsive sizing
   useEffect(() => {
@@ -468,32 +470,50 @@ export default function MapViewer({
     }
 
     // 2. Draw Combat & Loot Event Markers
-    const shouldShow = (ev: PlayerEvent): boolean => {
+    const shouldShow = (ev: PlayerEvent, meta?: EventCombatMeta): boolean => {
       if (isTimeActive && ev.ts > currentTime) return false;
 
-      switch (ev.type) {
-        case "Kill":
-        case "BotKill":
-          return layers.showKills;
-        case "Killed":
-        case "BotKilled":
-          return layers.showDeaths;
-        case "KilledByStorm":
-          return layers.showStorm;
-        case "Loot":
-          return layers.showLoot;
-        default:
+      if (ev.type === "Kill" || ev.type === "BotKill") {
+        if (!layers.showKills) return false;
+        if (meta?.isShared && layers.showSharedKills === false) return false;
+        if (meta?.isHuman && !meta?.isShared && layers.showHumanKills === false)
           return false;
+        if (!meta?.isHuman && !meta?.isShared && layers.showBotKills === false)
+          return false;
+        return true;
       }
+
+      if (ev.type === "Killed" || ev.type === "BotKilled") {
+        return layers.showDeaths;
+      }
+      if (ev.type === "KilledByStorm") {
+        return layers.showStorm;
+      }
+      if (ev.type === "Loot") {
+        return layers.showLoot;
+      }
+      return false;
     };
 
     for (const player of players) {
       for (const ev of player.events) {
-        if (!shouldShow(ev)) continue;
+        const meta = combatData.eventMetaMap.get(ev);
+        if (!shouldShow(ev, meta)) continue;
 
         const px = ev.x * scale;
         const py = ev.y * scale;
-        const color = EVENT_COLORS[ev.type] || "#ffffff";
+
+        // Custom colors for combat distinction
+        let color = EVENT_COLORS[ev.type] || "#ffffff";
+        if (ev.type === "Kill" || ev.type === "BotKill") {
+          if (meta?.isShared) {
+            color = "#facc15"; // Gold / Amber for Shared Kill
+          } else if (meta?.isHuman) {
+            color = "#22d3ee"; // Cyan for Human Kill
+          } else {
+            color = "#ef4444"; // Red for Bot Kill
+          }
+        }
 
         // Dynamic combat shockwave pulse if event happened recently (within last 3.5s)
         if (isTimeActive && currentTime >= ev.ts && currentTime - ev.ts <= 3.5) {
@@ -515,7 +535,11 @@ export default function MapViewer({
         ctx.globalAlpha = 0.9;
 
         if (ev.type === "Kill" || ev.type === "BotKill") {
-          drawCrosshair(ctx, px, py, 6, color);
+          if (meta?.isShared) {
+            drawSharedCrosshair(ctx, px, py, 7, color);
+          } else {
+            drawCrosshair(ctx, px, py, meta?.isHuman ? 7 : 6, color);
+          }
         } else if (ev.type === "Killed" || ev.type === "BotKilled") {
           drawSkull(ctx, px, py, 5, color);
         } else if (ev.type === "KilledByStorm") {
@@ -531,8 +555,12 @@ export default function MapViewer({
   }, [
     players,
     dwellClusters,
+    combatData,
     layers.showCampers,
     layers.showKills,
+    layers.showHumanKills,
+    layers.showBotKills,
+    layers.showSharedKills,
     layers.showDeaths,
     layers.showLoot,
     layers.showStorm,
@@ -589,9 +617,39 @@ export default function MapViewer({
           const py = ev.y * scale;
           const dist = Math.hypot(mx - px, my - py);
           if (dist < threshold) {
+            const meta = combatData.eventMetaMap.get(ev);
+
+            let title = `${ev.type} (${player.isHuman ? "Human" : "Bot"})`;
+            let subtitle = `User ${player.userId.substring(0, 8)}… at ${ev.ts.toFixed(1)}s`;
+
+            if (ev.type === "Kill" || ev.type === "BotKill") {
+              if (meta?.isShared) {
+                title = `🤝 Shared Kill (Assist Credit)`;
+                subtitle = `Killer: ${player.isHuman ? "Human" : "Bot"} (${player.userId.substring(0, 8)}…) at ${ev.ts.toFixed(1)}s • Shared with: ${meta.sharedWith.join(", ")}`;
+              } else if (meta?.isHuman) {
+                title = `🎯 Human Kill`;
+                subtitle = `Killer: Human (${player.userId.substring(0, 8)}…) at ${ev.ts.toFixed(1)}s`;
+              } else {
+                title = `🤖 Bot Kill`;
+                subtitle = `Killer: Bot ${player.userId} at ${ev.ts.toFixed(1)}s`;
+              }
+            } else if (ev.type === "Killed" || ev.type === "BotKilled") {
+              const causeText =
+                meta?.deathCause === "by_human"
+                  ? "Killed by Human 🎯"
+                  : meta?.deathCause === "storm"
+                  ? "Killed by Storm ⚡"
+                  : "Killed by Bot 🤖";
+              title = `💀 Death (${player.isHuman ? "Human" : "Bot"})`;
+              subtitle = `Victim: ${player.userId.substring(0, 8)}… at ${ev.ts.toFixed(1)}s • ${causeText}${meta?.isShared ? " [Assisted]" : ""}`;
+            } else if (ev.type === "KilledByStorm") {
+              title = `⚡ Storm Death`;
+              subtitle = `Victim: ${player.isHuman ? "Human" : "Bot"} (${player.userId.substring(0, 8)}…) at ${ev.ts.toFixed(1)}s`;
+            }
+
             setTooltip({
-              title: `${ev.type} (${player.isHuman ? "Human" : "Bot"})`,
-              subtitle: `User ${player.userId.substring(0, 8)}… at ${ev.ts.toFixed(1)}s`,
+              title,
+              subtitle,
               x: e.clientX,
               y: e.clientY,
             });
@@ -767,6 +825,36 @@ export default function MapViewer({
 }
 
 // Marker Helpers
+function drawSharedCrosshair(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  color: string
+) {
+  // Outer gold halo
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.arc(x, y, size + 2, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Crosshair
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - size, y);
+  ctx.lineTo(x + size, y);
+  ctx.moveTo(x, y - size);
+  ctx.lineTo(x, y + size);
+  ctx.stroke();
+
+  // White core highlight
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 function drawCrosshair(
   ctx: CanvasRenderingContext2D,
   x: number,
